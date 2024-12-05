@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hamster Dino Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            overflow: hidden; /* Prevent scrollbars */
+        }
+
+        .game-container {
+            position: absolute;
+            width: 100vw; /* Full width */
+            height: 100vh; /* Full height */
+            border: none; /* No border */
+            overflow: hidden;
+            background-image: url('bg.jpg'); /* Background image */
+            background-size: cover;
+        }
+
+        .score-board {
+            text-align: center;
+            margin: 20px;
+            position: absolute;
+            width: 100%;
+            z-index: 10;
+            color: #8B4513; /* Dark brown color */
+        }
+
+        #game-area {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            bottom: 0;
+            display: flex;
+            align-items: flex-end; /* Align items to the bottom */
+        }
+
+        #hamster {
+            width: 120px; /* Increased size of hamster */
+            height: 120px; /* Increased size of hamster */
+            background-image: url('h.jpg'); /* Hamster image */
+            background-size: cover;
+            position: absolute;
+            bottom: 0;
+            left: 30px; /* Fixed position on the left */
+            transition: left 0.1s; /* Transition only for horizontal movement */
+        }
+
+        .wallet {
+            width: 50px; /* Decreased size of wallet */
+            height: 50px; /* Decreased size of wallet */
+            background-image: url('w.jpg'); /* Wallet image */
+            background-size: cover;
+            position: absolute;
+            bottom: 0; /* Stuck to the ground */
+        }
+
+        .coin {
+            width: 30px; /* Decreased size of coin */
+            height: 30px; /* Decreased size of coin */
+            background-image: url('c.jpg'); /* Coin image */
+            background-size: cover;
+            position: absolute;
+            bottom: 0; /* Stuck to the ground */
+        }
+
+        /* New half coin half wallet style */
+        .half-wallet {
+            width: 50px; /* Decreased size of half wallet */
+            height: 50px; /* Decreased size of half wallet */
+            background: linear-gradient(to right, #FFD700 50%, #8B4513 50%); /* Half gold, half brown */
+            position: absolute;
+            bottom: 0; /* Stuck to the ground */
+        }
+
+        /* Keyframes for jumping animation */
+        @keyframes jump {
+            0% { bottom: 0; }
+            50% { bottom: 300px; } /* Increased jump height */
+            100% { bottom: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="score-board">
+            <h1>Hamster Dino Game</h1>
+            <div id="score">Score: 0</div>
+            <div id="level">Level: 1</div>
+            <div id="time">Time: 0s</div>
+        </div>
+        <div id="game-area">
+            <div id="hamster"></div>
+        </div>
+    </div>
+    <script>
+        let score = 0;
+        let level = 1;
+        let timeSpent = 0;
+        let isJumping = false;
+        let gameInterval;
+        let timeInterval;
+        const hamsterSpeed = 10; // Speed of hamster movement
+        const obstacleSpeed = 30; // Increased speed of wallet and coin movement
+        let wallets = [];
+        let coins = [];
+        const maxItems = 10; // Maximum number of items on screen
+
+        const scoreElement = document.getElementById('score');
+        const levelElement = document.getElementById('level');
+        const timeElement = document.getElementById('time');
+        const hamster = document.getElementById('hamster');
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !isJumping) {
+                jump();
+            }
+        });
+
+        function jump() {
+            isJumping = true;
+            hamster.style.animation = 'jump 0.5s forwards'; // Apply jump animation
+
+            setTimeout(() => {
+                hamster.style.animation = ''; // Reset animation
+                isJumping = false; // Allow jumping again
+            }, 500);
+        }
+
+        function startGame() {
+            createItems(); // Create initial items
+
+            gameInterval = setInterval(() => {
+                moveItems();
+                checkCollision();
+            }, 50); // Check for collisions every 50ms
+
+            timeInterval = setInterval(() => {
+                timeSpent++;
+                timeElement.textContent = `Time: ${timeSpent}s`;
+                levelUp(); // Check for level up
+            }, 1000); // Update time every second
+        }
+
+        function levelUp() {
+            if (timeSpent % 30 === 0) { // Level up every 30 seconds
+                level++;
+                levelElement.textContent = `Level: ${level}`;
+                if (level >= 7) {
+                    // Create half wallet items
+                    createHalfWallet();
+                }
+            }
+        }
+
+        function moveItems() {
+            wallets.forEach(wallet => {
+                const currentLeft = parseInt(window.getComputedStyle(wallet).left);
+                wallet.style.left = `${currentLeft - obstacleSpeed}px`; // Move wallet to the left
+
+                // Remove wallet if it goes off-screen
+                if (currentLeft < -50) {
+                    wallet.remove();
+                }
+            });
+
+            coins.forEach(coin => {
+                const currentLeft = parseInt(window.getComputedStyle(coin).left);
+                coin.style.left = `${currentLeft - obstacleSpeed}px`; // Move coin to the left
+
+                // Remove coin if it goes off-screen
+                if (currentLeft < -30) {
+                    coin.remove();
+                }
+            });
+        }
+
+        function createItems() {
+            // Create one wallet and multiple coins at intervals
+            setInterval(() => {
+                if (Math.random() < 0.5) { // 50% chance to create a coin or wallet
+                    createCoin();
+                } else {
+                    createWallet();
+                }
+            }, 1000); // Adjust the interval to control the frequency of spawning
+        }
+
+        function createWallet() {
+            const wallet = document.createElement('div');
+            wallet.classList.add('wallet');
+            wallet.style.left = `${window.innerWidth + Math.random() * 100}px`; // Random position off the right side
+            document.getElementById('game-area').appendChild(wallet);
+            wallets.push(wallet);
+        }
+
+        function createCoin() {
+            const coin = document.createElement('div');
+            coin.classList.add('coin');
+            coin.style.left = `${window.innerWidth + Math.random() * 100 + 300}px`; // Random position off the right side, spaced out more
+            document.getElementById('game-area').appendChild(coin);
+            coins.push(coin);
+        }
+
+        function createHalfWallet() {
+            const halfWallet = document.createElement('div');
+            halfWallet.classList.add('half-wallet');
+            halfWallet.style.left = `${window.innerWidth + Math.random() * 100}px`; // Random position off the right side
+            document.getElementById('game-area').appendChild(halfWallet);
+            wallets.push(halfWallet);
+        }
+
+        function checkCollision() {
+            const hamsterRect = hamster.getBoundingClientRect();
+
+            // Check for collision with wallets
+            wallets.forEach((item, index) => {
+                const itemRect = item.getBoundingClientRect();
+                if (
+                    hamsterRect.left < itemRect.right &&
+                    hamsterRect.right > itemRect.left &&
+                    hamsterRect.bottom > itemRect.top &&
+                    hamsterRect.top < itemRect.bottom
+                ) {
+                    if (item.classList.contains('wallet')) {
+                        score -= 100000000; // Decrease score by 100 for wallet
+                    } else if (item.classList.contains('half-wallet')) {
+                        score -= 50; // Decrease score by 50 for half wallet
+                    }
+                    scoreElement.textContent = `Score: ${score}`;
+                    item.remove(); // Remove item from the game
+                    wallets.splice(index, 1); // Remove item from the array
+
+                    if (score < 0) {
+                        score = 0; // Prevent negative score
+                        alert("Sorry, no money! Play again.");
+                        resetGame();
+                    }
+                }
+            });
+
+            // Check for collision with coins
+            coins.forEach((coin, index) => {
+                const coinRect = coin.getBoundingClientRect();
+                if (
+                    hamsterRect.left < coinRect.right &&
+                    hamsterRect.right > coinRect.left &&
+                    hamsterRect.bottom > coinRect.top &&
+                    hamsterRect.top < coinRect.bottom
+                ) {
+                    score += 100000000; // Increase score by 100
+                    scoreElement.textContent = `Score: ${score}`;
+                    coin.remove(); // Remove coin from the game
+                    coins.splice(index, 1); // Remove coin from the array
+                }
+            });
+        }
+
+        function resetGame() {
+            clearInterval(gameInterval);
+            clearInterval(timeInterval);
+            score = 0;
+            level = 1;
+            timeSpent = 0;
+            scoreElement.textContent = `Score: ${score}`;
+            levelElement.textContent = `Level: ${level}`;
+            timeElement.textContent = `Time: ${timeSpent}s`;
+            hamster.style.left = '30px'; // Reset hamster position
+            wallets.forEach(wallet => wallet.remove()); // Remove all wallets
+            coins.forEach(coin => coin.remove()); // Remove all coins
+            wallets = []; // Reset wallets array
+            coins = []; // Reset coins array
+            startGame(); // Restart the game
+        }
+
+        startGame(); // Start the game
+    </script>
+</body>
+</html>
